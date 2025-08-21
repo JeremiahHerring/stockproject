@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -42,7 +42,7 @@ const StockChart: React.FC<StockChartProps> = ({ stock }) => {
     fetchHistoricalData();
   }, [stock.symbol]);
 
-  const fetchHistoricalData = async () => {
+  const fetchHistoricalData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -83,7 +83,7 @@ const StockChart: React.FC<StockChartProps> = ({ stock }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [stock.symbol]);
 
   // Fetch historical data with retry logic
   const fetchHistoricalDataWithRetry = async (symbol: string, apiKey: string, retries: number = 2) => {
@@ -125,7 +125,7 @@ const StockChart: React.FC<StockChartProps> = ({ stock }) => {
   // Utility function for delays
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  const generateFallbackData = () => {
+  const generateFallbackData = useCallback(() => {
     const days = 30;
     const data = [];
     const labels = [];
@@ -144,7 +144,7 @@ const StockChart: React.FC<StockChartProps> = ({ stock }) => {
     }
     
     setChartData({ labels, data });
-  };
+  }, [stock.price]);
 
   if (loading) {
     return (
