@@ -5,13 +5,6 @@ import SearchBar from './SearchBar';
 import LoadingSpinner from './LoadingSpinner';
 import { StockData, fetchStockData } from '../services/stockService';
 
-interface Notification {
-  id: string;
-  type: 'success' | 'error' | 'warning' | 'info';
-  message: string;
-  title: string;
-}
-
 const StockDashboard: React.FC = () => {
   const [stocks, setStocks] = useState<StockData[]>([]);
   const [filteredStocks, setFilteredStocks] = useState<StockData[]>([]);
@@ -20,7 +13,6 @@ const StockDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStock, setSelectedStock] = useState<StockData | null>(null);
   const [usingCachedData, setUsingCachedData] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   useEffect(() => {
     loadStockData();
@@ -35,48 +27,20 @@ const StockDashboard: React.FC = () => {
     setFilteredStocks(filtered);
   }, [searchTerm, stocks]);
 
-  const addNotification = (type: Notification['type'], title: string, message: string) => {
-    const id = Date.now().toString();
-    const newNotification: Notification = { id, type, title, message };
-    setNotifications(prev => [...prev, newNotification]);
-    
-    // Auto-remove notification after 5 seconds
-    setTimeout(() => {
-      removeNotification(id);
-    }, 5000);
-  };
-
-  const removeNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  };
-
   const loadStockData = async () => {
     try {
       setLoading(true);
       setError(null);
       setUsingCachedData(false);
       
-      const data = await fetchStockData((type, title, message) => {
-        addNotification(type, title, message);
-      });
+      const data = await fetchStockData();
       setStocks(data);
       setFilteredStocks(data);
       
-      // Check if we're using cached data (this will be logged in the service)
+      // Check if we're using cached data
       // We can't directly detect this, but we can show a message if data seems stale
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch stock data';
       setError('Failed to fetch stock data. Please try again later.');
-      
-      // Show specific notifications for different error types
-      if (errorMessage.includes('rate limit') || errorMessage.includes('Rate limit')) {
-        addNotification('warning', 'Rate Limit Reached', 'API rate limit reached. Please wait a moment before refreshing.');
-      } else if (errorMessage.includes('API key')) {
-        addNotification('error', 'Configuration Error', 'API key not found. Please check your .env file.');
-      } else {
-        addNotification('error', 'API Error', errorMessage);
-      }
-      
       console.error('Error fetching stock data:', err);
     } finally {
       setLoading(false);
@@ -84,7 +48,6 @@ const StockDashboard: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    addNotification('info', 'Refreshing Data', 'Fetching latest stock data from Finnhub...');
     loadStockData();
   };
 
@@ -112,63 +75,6 @@ const StockDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Notifications */}
-      <div className="fixed top-4 right-4 z-50 space-y-2">
-        {notifications.map(notification => (
-          <div
-            key={notification.id}
-            className={`max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden transform transition-all duration-300 ease-in-out ${
-              notification.type === 'error' ? 'ring-red-500' :
-              notification.type === 'warning' ? 'ring-yellow-500' :
-              notification.type === 'success' ? 'ring-green-500' :
-              'ring-blue-500'
-            }`}
-          >
-            <div className="p-4">
-              <div className="flex items-start">
-                <div className="flex-shrink-0">
-                  {notification.type === 'error' && (
-                    <svg className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  )}
-                  {notification.type === 'warning' && (
-                    <svg className="h-6 w-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                  )}
-                  {notification.type === 'success' && (
-                    <svg className="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  )}
-                  {notification.type === 'info' && (
-                    <svg className="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  )}
-                </div>
-                <div className="ml-3 w-0 flex-1 pt-0.5">
-                  <p className="text-sm font-medium text-gray-900">{notification.title}</p>
-                  <p className="mt-1 text-sm text-gray-500">{notification.message}</p>
-                </div>
-                <div className="ml-4 flex-shrink-0 flex">
-                  <button
-                    onClick={() => removeNotification(notification.id)}
-                    className="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  >
-                    <span className="sr-only">Close</span>
-                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
       {/* Search and Controls */}
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
         <SearchBar
@@ -197,7 +103,7 @@ const StockDashboard: React.FC = () => {
               API Rate Limits
             </h3>
             <div className="mt-2 text-sm text-blue-700">
-              <p>Free Finnhub API: 5 calls/minute, 500/day. If you see errors, wait a moment and try again.</p>
+              <p>Free Finnhub API: 60 calls/minute, 1000/day. If you see errors, wait a moment and try again.</p>
             </div>
           </div>
         </div>

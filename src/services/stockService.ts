@@ -6,11 +6,8 @@ export interface StockData {
   volume: number;
 }
 
-// Callback types for notifications
-export type NotificationCallback = (type: 'warning' | 'info', title: string, message: string) => void;
-
 // Finnhub API integration
-export const fetchStockData = async (onNotification?: NotificationCallback): Promise<StockData[]> => {
+export const fetchStockData = async (): Promise<StockData[]> => {
   const API_KEY = process.env.REACT_APP_FINNHUB_API_KEY;
   
   if (!API_KEY) {
@@ -22,14 +19,10 @@ export const fetchStockData = async (onNotification?: NotificationCallback): Pro
   
   try {
     // Fetch stock data from Finnhub
-    const stockData = await fetchStocksFromFinnhub(symbols, API_KEY, onNotification);
+    const stockData = await fetchStocksFromFinnhub(symbols, API_KEY);
     
     if (stockData.length === 0) {
       throw new Error('No valid stock data received from API');
-    }
-    
-    if (onNotification) {
-      onNotification('info', 'Data Updated', `Successfully loaded ${stockData.length} stocks with real-time data from Finnhub.`);
     }
     
     return stockData;
@@ -40,9 +33,6 @@ export const fetchStockData = async (onNotification?: NotificationCallback): Pro
     const cachedData = getCachedStockData();
     if (cachedData.length > 0) {
       console.log('Returning cached data due to API failure');
-      if (onNotification) {
-        onNotification('warning', 'Using Cached Data', 'API temporarily unavailable. Showing cached data from previous session.');
-      }
       return cachedData;
     }
     
@@ -51,9 +41,7 @@ export const fetchStockData = async (onNotification?: NotificationCallback): Pro
 };
 
 // Fetch stocks from Finnhub
-const fetchStocksFromFinnhub = async (symbols: string[], apiKey: string, onNotification?: NotificationCallback): Promise<StockData[]> => {
-  const results: StockData[] = [];
-  
+const fetchStocksFromFinnhub = async (symbols: string[], apiKey: string): Promise<StockData[]> => {
   try {
     // Fetch all stocks in parallel since Finnhub has better rate limits
     const promises = symbols.map(async (symbol) => {
