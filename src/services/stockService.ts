@@ -11,7 +11,9 @@ export const fetchStockData = async (): Promise<StockData[]> => {
   const API_KEY = process.env.REACT_APP_FINNHUB_API_KEY;
   
   if (!API_KEY) {
-    throw new Error('Finnhub API key not found. Please add REACT_APP_FINNHUB_API_KEY to your .env file.');
+    console.warn('Finnhub API key not found. Please add REACT_APP_FINNHUB_API_KEY to your .env file.');
+    // Return empty array instead of throwing error to prevent build failures
+    return [];
   }
 
   // Popular stock symbols to fetch
